@@ -8,18 +8,19 @@
 # --- Configuración General del Experimento ---
 seed: 42
 do_train: true
-do_test: false # Cambia a true cuando quieras evaluar un modelo ya entrenado
-task: finetune
-experiment_name: mi_experimento_finetune_v1
+do_test: false
+task: finetune  # Correcto: usamos el modo de entrenamiento supervisado con etiquetas.
+experiment_name: mi_experimento_final_v1
 output_dir: ./outputs/
 
-# --- Configuración del Dataset (¡La parte más importante para ti!) ---
-dataset_name: "custom" # Activa nuestro código en main.py
-data_dir: "/content/lanistr/"   # Ruta a la carpeta que contiene tu CSV
-category: "multi_dataset"   # Nombre de tu CSV (sin la extensión .csv)
+finetune_initialize_from: random
+
+# --- Configuración del Dataset ---
+dataset_name: "custom"
+data_dir: "/content/lanistr/"
+category: "multi_dataset"
 
 # --- Definición del Esquema de Datos ---
-# Aquí defines la estructura de tu CSV. ¡Máxima flexibilidad!
 data_schema:
   # Unimos las 4 fases de la conversación para un contexto completo
   text_cols:
@@ -27,8 +28,7 @@ data_schema:
     - 'interaccion'
     - 'resultado'
     - 'cierre'
-
-  # Usamos todas las características numéricas y de sentimiento
+  # Usamos todas las características numéricas
   numeric_cols:
     - 'num_word_text'
     - 'count_dialogue_cliente'
@@ -36,87 +36,79 @@ data_schema:
     - 'num_word_text_cliente'
     - 'word_per_dialogue_operador'
     - 'proportion_dialogue_captador'
-
-  # Tu dataset no tiene columnas categóricas, lo cual es normal.
-  # Dejamos la lista vacía.
+  # Tratamos las columnas de sentimiento como categóricas (ej. 0 y 1)
   categorical_cols:
     - 'sentiment_text_POS'
     - 'sentiment_cliente_POS'
     - 'sentiment_captador_POS'
-
   # La columna 'result' es claramente el objetivo a predecir
   target_col: 'result'
 
 # --- Configuración de Modalidades ---
-# Desactivamos la modalidad de imagen
 image: false
-text: true
 time: false
+text: true
 tab: true
-
-finetune_initialize_from: pretrain
 
 # ===============================================================
 # SECCIÓN 2: HIPERPARÁMETROS DEL MODELO Y ENTRENAMIENTO
-# (Puedes copiar y ajustar estos valores desde los .yaml de Amazon)
 # ===============================================================
 
-# --- Entrenamiento ---
+# --- Parámetros de la Tarea ---
 train_batch_size: 32
-eval_batch_size: 64
-num_classes: 2 # Ajusta al número de clases de tu 'target_col'
-perf_metric: accuracy # O 'auc', etc.
+eval_batch_size: 128
+test_batch_size: 256
+num_classes: 2
+perf_metric: auroc
 
 # --- Optimizador y Scheduler ---
 scheduler:
   num_epochs: 50
   warmup_epochs: 5
 optimizer:
-  learning_rate: 1e-4
+  # ¡IMPORTANTE! Tasa de aprendizaje baja para entrenar BERT de forma estable.
+  learning_rate: 2e-5
   weight_decay: 0.1
+  clip_value: 5.0
 
 # --- Arquitectura del Modelo ---
-# Como image=false, la sección del "image_encoder" es ignorada por el modelo,
-# así que la podemos omitir para mayor claridad.
+
+# Dimensiones Unificadas
+projection_dim: 768
+
+# classifier head
+classifier_hidden_dim: 768
 
 # simsiam pretraining projector and predictor
 projection_type: SimSiam
 predictor_hidden_dim: 512
 predictor_out_dim: 2048
 
-# unimodal encoders projection dim
-projection_dim: 768
-
-# classifier head
-classifier_hidden_dim: 768
-
-# text encoder
-tokenizer_name_or_path: bert-base-uncased
+# Text Encoder
 text_encoder_name: bert-base-uncased
 text_encoder_pretrained: true
-text_encoder_trainable: false
-text_proj_trainable: true
 text_embedding_dim: 768
 max_token_length: 512
 mlm_probability: 0.15
+# ¡IMPORTANTE! Activado para que aprenda de tus datos.
+text_encoder_trainable: true
+text_proj_trainable: true
 
-# tabular encoder
+# Tabular Encoder
 tabular_encoder_name: tabnet
-tabular_encoder_trainable: false
-tabular_proj_trainable: true
 tabular_output_dim: 768
 tabular_embedding_dim: 64
-tabular_pretraining_ratio: 0.15
 tabular_cat_emb_dim: 3
 tabular_mask_type: sparsemax
 tabular_n_d: 64
 tabular_n_a: 64
+# ¡IMPORTANTE! Activado para que aprenda de tus datos.
+tabular_encoder_trainable: true
+tabular_proj_trainable: true
 
-# --- AÑADE ESTE BLOQUE COMPLETO ---
-# image encoder (parámetros fantasma para satisfacer al constructor)
-# El modelo NO usará imágenes porque 'image: false' sigue activo.
+# Image Encoder (Fantasma) - NECESARIO para evitar el error de inicialización
 image_encoder_name: google/vit-base-patch16-224
-image_encoder_pretrained: false  # False para no descargar pesos innecesarios
+image_encoder_pretrained: false
 image_encoder_trainable: false
 image_proj_trainable: false
 image_embedding_dim: 768
@@ -131,3 +123,4 @@ mm_output_dim: 2048
 multiprocessing_distributed: false
 ngpus_per_node: 1
 world_size: 1
+workers: 2

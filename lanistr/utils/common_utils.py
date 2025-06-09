@@ -108,6 +108,13 @@ def get_metrics(args):
             num_classes=args.num_classes, task="binary"
         ).to(args.device)
 
+    elif args.dataset_name.startswith("custom"):
+      metric_names.append("AUROC")
+      for phase in ["test", "train"]:
+        metrics[phase]["AUROC"] = torchmetrics.AUROC(
+            num_classes=args.num_classes, task="binary"
+        ).to(args.device)
+
   return metrics, metric_names
 
 

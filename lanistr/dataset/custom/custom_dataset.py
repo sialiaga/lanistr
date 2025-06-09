@@ -1,4 +1,4 @@
-# Contenido COMPLETO Y CORRECTO para lanistr/dataset/custom/custom_dataset.py
+# Contenido FINAL Y CORREGIDO para lanistr/dataset/custom/custom_dataset.py
 
 import torch
 from torch.utils.data import Dataset
@@ -11,10 +11,6 @@ class CustomTextTabularDataset(Dataset):
     def __init__(self, processed_data: dict):
         """
         Se inicializa directamente con un diccionario de tensores ya procesados.
-        
-        Args:
-            processed_data (dict): Un diccionario que debe contener 'input_ids', 
-                                   'attention_mask', 'tabular_features' y 'labels' como tensores.
         """
         self.input_ids = processed_data['input_ids']
         self.attention_mask = processed_data['attention_mask']
@@ -28,12 +24,15 @@ class CustomTextTabularDataset(Dataset):
     def __getitem__(self, index: int):
         """
         Devuelve una única muestra del dataset.
-        Es una operación muy rápida de indexación de tensores.
+        Añadimos una dimensión extra a los tensores de texto para que coincidan
+        con la forma 3D que espera la arquitectura de Lanistr.
         """
         return {
-            'input_ids': self.input_ids[index],
-            'attention_mask': self.attention_mask[index],
-            # Nombramos la clave 'features' para mantener consistencia con el código original de Lanistr
+            # --- LÍNEAS CORREGIDAS ---
+            # .unsqueeze(0) añade la dimensión de "num_campos_de_texto" (que es 1).
+            'input_ids': self.input_ids[index].unsqueeze(0),
+            'attention_mask': self.attention_mask[index].unsqueeze(0),
+            # -------------------------
             'features': self.tabular_features[index], 
             'labels': self.labels[index]
         }
