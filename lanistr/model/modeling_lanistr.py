@@ -92,10 +92,18 @@ class LANISTRMultiModalForPreTraining(nn.Module):
     self.mlm_head = mlm_head(text_encoder.config)
     self.mlm_loss_fcn = nn.CrossEntropyLoss()  # -100 index = padding token
 
-    self.image_encoder.embeddings.mask_token = nn.Parameter(
-        torch.zeros(1, 1, image_encoder.config.hidden_size)
-    )
-    self.mim_head = mim_head(image_encoder.config)
+    # --- INICIO DE LA CORRECCIÓN ---
+    # Solo inicializamos los componentes de imagen si el image_encoder existe.
+    if self.image_encoder is not None:
+        self.image_encoder.embeddings.mask_token = nn.Parameter(
+            torch.zeros(1, 1, image_encoder.config.hidden_size)
+        )
+        self.mim_head = mim_head(image_encoder.config)
+    else:
+        # Si no hay image_encoder, asignamos None a los atributos para que existan
+        # pero no se usen, evitando errores.
+        self.mim_head = None
+    # --- FIN DE LA CORRECCIÓN ---
 
     self.mtm_loss_fcn = MaskedMSELoss(reduction='none')
 

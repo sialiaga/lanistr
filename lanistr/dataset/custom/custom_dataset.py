@@ -1,4 +1,4 @@
-# Contenido para lanistr/dataset/custom/custom_dataset.py
+# Contenido COMPLETO Y CORRECTO para lanistr/dataset/custom/custom_dataset.py
 
 import torch
 from torch.utils.data import Dataset
