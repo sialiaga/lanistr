@@ -1,0 +1,76 @@
+# Copyright 2024 Google LLC.
+# (Tu licencia aquí)
+
+# ===============================================================
+# SECCIÓN 1: CONFIGURACIÓN DEL EXPERIMENTO Y DATOS
+# ===============================================================
+
+# --- Configuración General del Experimento ---
+seed: 42
+do_train: true
+do_test: false # Cambia a true cuando quieras evaluar un modelo ya entrenado
+task: finetune
+experiment_name: mi_experimento_finetune_v1
+output_dir: ./outputs/mi_experimento_v1
+
+# --- Configuración del Dataset (¡La parte más importante para ti!) ---
+dataset_name: "custom" # Activa nuestro código en main.py
+data_dir: "./data/mi_empresa/ventas"   # Ruta a la carpeta que contiene tu CSV
+category: "reporte_ventas_q1"   # Nombre de tu CSV (sin la extensión .csv)
+
+# --- Definición del Esquema de Datos ---
+# Aquí defines la estructura de tu CSV. ¡Máxima flexibilidad!
+data_schema:
+  text_cols: ['descripcion_producto', 'comentario_cliente']
+  numeric_cols: ['precio', 'descuento', 'cantidad_stock']
+  categorical_cols: ['id_vendedor', 'region', 'categoria_producto']
+  target_col: 'prediccion_proxima_compra'
+
+# --- Configuración de Modalidades ---
+# Desactivamos la modalidad de imagen
+image: false
+text: true
+time: false
+tab: true
+
+# ===============================================================
+# SECCIÓN 2: HIPERPARÁMETROS DEL MODELO Y ENTRENAMIENTO
+# (Puedes copiar y ajustar estos valores desde los .yaml de Amazon)
+# ===============================================================
+
+# --- Entrenamiento ---
+train_batch_size: 32
+eval_batch_size: 64
+num_classes: 2 # Ajusta al número de clases de tu 'target_col'
+perf_metric: accuracy # O 'auc', etc.
+
+# --- Optimizador y Scheduler ---
+scheduler:
+  num_epochs: 50
+  warmup_epochs: 5
+optimizer:
+  learning_rate: 1e-4
+  weight_decay: 0.1
+
+# --- Arquitectura del Modelo ---
+# Como image=false, la sección del "image_encoder" es ignorada por el modelo,
+# así que la podemos omitir para mayor claridad.
+
+# Text Encoder
+text_encoder_name: bert-base-uncased
+text_encoder_trainable: false # Congelado para finetuning
+max_token_length: 256
+
+# Tabular Encoder
+tabular_encoder_name: tabnet
+tabular_encoder_trainable: true # Entrenar esta parte
+
+# Multimodal Fusion
+mm_encoder_trainable: true
+mm_hidden_dim: 1024
+
+# --- Paralelismo ---
+# Configuración para una sola GPU
+multiprocessing_distributed: false
+ngpus_per_node: 1
+world_size: 1
